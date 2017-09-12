@@ -1,0 +1,15 @@
+OASISFormat: 0.4
+Name: STTforall
+Version: 0.1
+Synopsis: An implementation of the STTforall logic
+Authors: François Thiré <franth2@gmail.com>
+License: GPL
+
+BuildTools: ocamlbuild
+Plugins: META (0.4), DevFiles (0.4)
+
+Executable "sttforall"
+  Path: src/sttforall
+  MainIs: sttforall.ml
+  CompiledObject: native
+  BuildDepends: ppx_deriving.std, bindlib

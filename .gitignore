@@ -1,3 +1,4 @@
+# ocaml
 *.annot
 *.cmo
 *.cma
@@ -18,3 +19,11 @@ _build/
 # oasis generated files
 setup.data
 setup.log
+_tags
+Makefile
+myocamlbuild.ml
+setup.ml
+configure
+
+# emacs files
+*~

@@ -1,0 +1,8 @@
+S src
+S src/sttforall
+
+B _build
+B _build/src
+B _build/src/sttforall
+
+PKG bindlib
