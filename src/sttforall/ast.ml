@@ -20,7 +20,7 @@ type ty =
   | TyVar of ty var
   | Prop
   | Arrow of ty * ty
-  | Tyop of tyop * ty var list
+  | Tyop of tyop * ty list
 [@@deriving show, eq]
 
 type 'b ty_binder = (ty,'b) binder
@@ -32,7 +32,6 @@ type pty =
   | Ty of ty
   | ForallK of pty ty_binder
 [@@deriving show, eq]
-
 
 type term =
   | Var of term var
@@ -105,27 +104,27 @@ let mkfree_tyvar = fun x -> TyVar x
 
 let mkfree_var = fun x -> Var x
 
-let var_ty = fun x -> new_var mkfree_tyvar x
+let newvar_ty = fun x -> new_var mkfree_tyvar x
 
 let prop = box Prop
 
 let arrow tyl tyr = box_apply2 (fun tyl tyr -> Arrow(tyl,tyr)) tyl tyr
 
-let tyop op vars = box (Tyop(op,vars))
+let tyop op tys  = box_apply (fun tys -> Tyop(op, tys)) (box_list tys)
 
 let ty x = box_apply (fun b -> Ty(b)) x
 
 let forallK var_ty pty = box_apply (fun b -> ForallK b) (bind_var var_ty pty)
 
-let var = fun x -> new_var mkfree_var x
+let newvar = fun x -> new_var mkfree_var x
 
-let abs var ty t = box_apply (fun b -> Abs(unbox ty,b)) (bind_var var t)
+let abs var ty f = box_apply2 (fun ty b -> Abs(ty,b)) ty (vbind mkfree_var var f)
 
 let app f a = box_apply2 (fun f a -> App(f,a)) f a
 
 let impl f a = box_apply2 (fun f a -> Impl(f,a)) f a
 
-let forall var ty t = box_apply (fun b -> Forall(unbox ty,b)) (bind_var var t)
+let forall var ty t = box_apply2 (fun ty b -> Forall(ty,b)) ty (bind_var var t)
 
 let absT var_ty t = box_apply (fun b -> AbsT(b)) (bind_var var_ty t)
 

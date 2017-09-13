@@ -8,7 +8,7 @@ let rec ty_fv ty =
   | TyVar x -> TyVarSet.singleton x
   | Prop -> TyVarSet.empty
   | Arrow(tyl, tyr) -> TyVarSet.union (ty_fv tyl) (ty_fv tyr)
-  | Tyop(_, vars) -> TyVarSet.of_list vars
+  | Tyop(_, vars) -> List.fold_left (fun s ty -> TyVarSet.union s (ty_fv ty)) TyVarSet.empty vars
 
 let rec pty_fv pty =
   match pty with
@@ -77,13 +77,13 @@ and has_type ctx term ty =
       | _ -> false
     end
   | Impl(f,a) ->
-    let prop = unbox prop in
+    let prop = Prop in
     equal_ty prop ty && has_type ctx f prop && has_type ctx a prop
   | Forall(ty, binder) ->
-    if has_type ctx term (unbox prop) then
+    if has_type ctx term (Prop) then
       let var,term = unbind mkfree_var binder in
       let ctx' = {ctx with var = (var,ty)::ctx.var} in
-      equal_ty (infer ctx' term) (unbox prop)
+      equal_ty (infer ctx' term) (Prop)
     else
       false
   | AbsT(binder) -> false
@@ -94,8 +94,9 @@ let rec has_ptype ctx term pty =
     begin
       match pty with
       | ForallK(forall) ->
-        let dummy = mkfree_tyvar (new_var mkfree_tyvar "dummy") in
-        has_ptype ctx (subst abs dummy) (subst forall dummy)
+        let dummy = (new_var mkfree_tyvar "dummy") in
+        let dummy' = mkfree_tyvar dummy in
+        has_ptype {ctx with ty = dummy::ctx.ty} (subst abs dummy') (subst forall dummy')
       | _ -> false
     end
   | _ ->
@@ -107,7 +108,7 @@ let rec pinfer ctx pterm =
   match pterm with
   | Term term -> infer ctx term
   | ForallT pbinder ->
-    let prop = unbox prop in
+    let prop = Prop in
     if phas_type ctx pterm prop then
       prop
     else
@@ -118,7 +119,7 @@ and phas_type ctx pterm ty =
   | Term term -> has_type ctx term ty
   | ForallT pbinder ->
     let var,pterm = unbind mkfree_tyvar pbinder in
-    let prop = unbox prop in
+    let prop = Prop in
     let ctx' = {ctx with ty = var::ctx.ty} in
     phas_type ctx' pterm prop && equal_ty ty prop
 

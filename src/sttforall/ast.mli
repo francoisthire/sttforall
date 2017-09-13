@@ -2,21 +2,19 @@ open Bindlib
 
 type tyop
 
-type ty = private
+type ty =
   | TyVar of ty var
   | Prop
   | Arrow of ty * ty
-  | Tyop of tyop * ty var list
+  | Tyop of tyop * ty list
 
 type 'b ty_binder = (ty,'b) binder
 
-val equal_ty : ty -> ty -> bool
-
-type pty = private
+type pty =
   | Ty of ty
   | ForallK of pty ty_binder
 
-type term = private
+type term =
   | Var of term var
   | Abs of ty * term term_binder
   | App of term * term
@@ -26,8 +24,7 @@ type term = private
 
 and 'b term_binder = (term, 'b) binder
 
-
-type pterm = private
+type pterm =
   | Term of term
   | ForallT of pterm ty_binder
 
@@ -37,20 +34,20 @@ type context =
   }
 
 
-type proof_context = private
+type proof_context =
   {
     ctx:context;
     hyp:term list
   }
 
 
-type proof = private
+type proof =
   { hyp:context;
     thm:term;
     rule:rule;
   }
 
-and rule = private
+and rule =
   | Assume
   | ImplE of proof * proof
   | ImplI of proof
@@ -59,25 +56,39 @@ and rule = private
   | ForallTE of proof * ty
   | ForallTI of proof
 
+
+val equal_ty    : ty -> ty -> bool
+val equal_pty   : pty -> pty -> bool
+val equal_term  : term -> term -> bool
+val equal_pterm : pterm -> pterm -> bool
+
+val pp_ty : Format.formatter -> ty -> unit
+
+val pp_pty : Format.formatter -> pty -> unit
+
+val pp_term : Format.formatter -> term -> unit
+
+val pp_pterm : Format.formatter -> pterm -> unit
+
 val mkfree_tyvar : ty var -> ty
 
 val mkfree_var : term var -> term
 
-val var_ty : string -> ty var
+val newvar_ty : string -> ty var
 
 val prop : ty bindbox
 
 val arrow : ty bindbox -> ty bindbox -> ty bindbox
 
-val tyop : tyop -> ty var list -> ty bindbox
+val tyop : tyop -> ty bindbox list -> ty bindbox
 
 val ty : ty bindbox -> pty bindbox
 
 val forallK : ty var -> pty bindbox -> pty bindbox
 
-val var : string -> term var
+val newvar : string -> term var
 
-val abs : term var -> ty bindbox -> term bindbox -> term bindbox
+val abs : string -> ty bindbox -> (term var -> term bindbox) -> term bindbox
 
 val app : term bindbox -> term bindbox -> term bindbox
 
