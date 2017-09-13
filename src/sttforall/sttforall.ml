@@ -1,6 +1,5 @@
 open Ast
 open Bindlib
+open Typing
 
-let f = fun x -> x
-
-let _ = Format.printf "%b" (f == (fun x -> f x))
+let _ = Format.printf "%b" ((fun x -> x) == (fun x -> (fun x -> x) x))
