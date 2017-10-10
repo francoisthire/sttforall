@@ -3,6 +3,17 @@ open Ast
 
 module TyVarSet = Set.Make (struct type t = ty var let compare = compare end)
 
+module ConstMap = Map.Make (struct type t = const_id let compare = compare end)
+
+module TyopMap = Map.Make (struct type t = tyop let compare = compare end)
+
+type signature =
+  {
+    tyop : arity TyopMap.t;
+    typeof : pty ConstMap.t;
+    defof : (pterm option) ConstMap.t
+  }
+
 let rec ty_fv ty =
   match ty with
   | TyVar x -> TyVarSet.singleton x
@@ -28,8 +39,11 @@ type typing_error =
   | WrongArgumentType of context * term * ty
   | ArrowExpected of context * term * ty
   | PropExpected of context * pterm
+  | TyopDeclaredTwice of tyop
+  | ConstantDeclaredTwice of const_id
+  | WrongConstantType of const_id * pty * pterm
 
-exception Typing_error of typing_error
+exception TypingError of typing_error
 
 let rec infer ctx term =
   match term with
@@ -38,7 +52,7 @@ let rec infer ctx term =
       try
         snd @@ List.find (fun (var,ty) -> eq_vars x var) ctx.var
       with Not_found ->
-        raise @@ Typing_error (VariableNotFound(ctx,x))
+        raise @@ TypingError (VariableNotFound(ctx,x))
     end
   | Abs(ty,binder) ->
     let var, term = unbind mkfree_var binder in
@@ -52,8 +66,8 @@ let rec infer ctx term =
         if has_type ctx a tyl then
           tyr
         else
-          raise @@ Typing_error (WrongArgumentType(ctx,a,tyl))
-      | _ -> raise @@ Typing_error (ArrowExpected(ctx,f,ty))
+          raise @@ TypingError (WrongArgumentType(ctx,a,tyl))
+      | _ -> raise @@ TypingError (ArrowExpected(ctx,f,ty))
     end
   | _ -> failwith "todo"
 
@@ -112,7 +126,7 @@ let rec pinfer ctx pterm =
     if phas_type ctx pterm prop then
       prop
     else
-      raise @@ Typing_error (PropExpected(ctx, pterm))
+      raise @@ TypingError (PropExpected(ctx, pterm))
 
 and phas_type ctx pterm ty =
   match pterm with
@@ -130,3 +144,63 @@ let phas_ptype ctx pterm pty =
     match pty with
     | Ty ty -> phas_type ctx pterm ty
     | _ -> false
+
+
+
+let empty_signature = {tyop = TyopMap.empty; typeof = ConstMap.empty ; defof = ConstMap.empty}
+
+let arity_of sg tyop =
+  if TyopMap.mem tyop sg.tyop then
+    Some (TyopMap.find tyop sg.tyop)
+  else
+    None
+
+let add_tyop sg tyop arity =
+  if TyopMap.mem tyop sg.tyop then
+    raise @@ TypingError(TyopDeclaredTwice tyop)
+  else
+    {sg with tyop = TyopMap.add tyop arity sg.tyop}
+
+let add_const sg const pty mpte : signature =
+  if ConstMap.mem const sg.typeof then
+    raise @@ TypingError(ConstantDeclaredTwice const)
+  else
+    match mpte with
+    | None -> {sg with typeof = ConstMap.add const pty sg.typeof;
+               defof = ConstMap.add const None sg.defof}
+    | Some pte ->
+      if phas_ptype Ast.empty_context pte pty then
+        {sg
+         with typeof = ConstMap.add const pty sg.typeof;
+              defof = ConstMap.add const (Some pte) sg.defof}
+      else
+        raise @@ TypingError(WrongConstantType(const, pty, pte))
+
+let check_decl sg decl =
+  match decl with
+  | Ast.ConstDecl (c,pty) ->
+    begin
+      try
+        Ok (add_const sg c pty None)
+      with TypingError e -> Error e
+    end
+  | Ast.ConstDef (c,pty,pte) ->
+    begin
+      try
+        Ok (add_const sg c pty (Some pte))
+      with TypingError e -> Error e
+    end
+  | Ast.TyopDef (tyop,arity) ->
+    begin
+      try
+        Ok (add_tyop sg tyop arity)
+      with TypingError e -> Error e
+    end
+
+let check_ast sg ast =
+  let bind result decl =
+    match result with
+    | Ok sg -> check_decl sg decl
+    | Error e -> Error e
+  in
+  List.fold_left bind (Ok sg) ast

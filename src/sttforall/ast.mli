@@ -1,5 +1,9 @@
 open Bindlib
 
+(* TODO
+   - add the constant case
+*)
+
 type tyop
 
 type ty =
@@ -56,6 +60,16 @@ and rule =
   | ForallTE of proof * ty
   | ForallTI of proof
 
+type const_id
+
+type arity
+
+type decl =
+  | ConstDecl of const_id * pty
+  | ConstDef of const_id * pty * pterm
+  | TyopDef of tyop * arity
+
+type ast = decl list
 
 val equal_ty    : ty -> ty -> bool
 val equal_pty   : pty -> pty -> bool
@@ -69,6 +83,14 @@ val pp_pty : Format.formatter -> pty -> unit
 val pp_term : Format.formatter -> term -> unit
 
 val pp_pterm : Format.formatter -> pterm -> unit
+
+val empty_context : context
+
+val arity_of_int : int -> arity
+
+val const_id_of_string : string -> const_id
+
+val tyop_of_string : string -> tyop
 
 val mkfree_tyvar : ty var -> ty
 
@@ -88,7 +110,7 @@ val forallK : ty var -> pty bindbox -> pty bindbox
 
 val newvar : string -> term var
 
-val abs : string -> ty bindbox -> (term var -> term bindbox) -> term bindbox
+val abs : term var -> ty bindbox -> term bindbox -> term bindbox
 
 val app : term bindbox -> term bindbox -> term bindbox
 

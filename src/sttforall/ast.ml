@@ -100,6 +100,25 @@ and rule =
   | ForallTI of proof
 [@@deriving show, eq]
 
+type const_id = string
+
+type arity = int
+
+type decl =
+  | ConstDecl of const_id * pty
+  | ConstDef of const_id * pty * pterm
+  | TyopDef of  tyop * arity
+
+type ast = decl list
+
+let empty_context = {ty=[]; var = []}
+
+let arity_of_int = fun x -> x
+
+let const_id_of_string = fun x -> x
+
+let tyop_of_string = fun x -> x
+
 let mkfree_tyvar = fun x -> TyVar x
 
 let mkfree_var = fun x -> Var x
@@ -118,7 +137,7 @@ let forallK var_ty pty = box_apply (fun b -> ForallK b) (bind_var var_ty pty)
 
 let newvar = fun x -> new_var mkfree_var x
 
-let abs var ty f = box_apply2 (fun ty b -> Abs(ty,b)) ty (vbind mkfree_var var f)
+let abs var ty t = box_apply2 (fun ty b -> Abs(ty,b)) ty (bind_var var t)
 
 let app f a = box_apply2 (fun f a -> App(f,a)) f a
 

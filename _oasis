@@ -12,4 +12,4 @@ Executable "sttforall"
   Path: src/sttforall
   MainIs: sttforall.ml
   CompiledObject: native
-  BuildDepends: ppx_deriving.std, bindlib
+  BuildDepends: ppx_deriving.std, bindlib, earley, earley.str

@@ -1,0 +1,1 @@
+#CST Eq : Forall X, X -> (X -> Prop) := X => x:X => y:X => (forall p : X -> Prop, ((p x) => (p y))).

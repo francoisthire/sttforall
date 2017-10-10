@@ -5,4 +5,4 @@ B _build
 B _build/src
 B _build/src/sttforall
 
-PKG bindlib ppx_deriving.std
+PKG bindlib ppx_deriving.std earley, earley.str
