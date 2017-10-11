@@ -46,13 +46,14 @@ type typing_error =
 exception TypingError of typing_error
 
 let rec infer ctx term =
+  Format.printf "infer: %a@." pp_term term;
   match term with
   | Var x ->
     begin
       try
         snd @@ List.find (fun (var,ty) -> eq_vars x var) ctx.var
       with Not_found ->
-        raise @@ TypingError (VariableNotFound(ctx,x))
+        raise @@ TypingError(VariableNotFound(ctx,x))
     end
   | Abs(ty,binder) ->
     let var, term = unbind mkfree_var binder in
@@ -66,12 +67,22 @@ let rec infer ctx term =
         if has_type ctx a tyl then
           tyr
         else
-          raise @@ TypingError (WrongArgumentType(ctx,a,tyl))
-      | _ -> raise @@ TypingError (ArrowExpected(ctx,f,ty))
+          raise @@ TypingError(WrongArgumentType(ctx,a,tyl))
+      | _ -> raise @@ TypingError(ArrowExpected(ctx,f,ty))
     end
+  | Impl(l,r) ->
+    if has_type ctx l Prop then
+      if has_type ctx r Prop then
+        Prop
+      else
+        raise @@ TypingError(PropExpected(ctx,Term r))
+    else
+        raise @@ TypingError(PropExpected(ctx,Term l))
   | _ -> failwith "todo"
 
 and has_type ctx term ty =
+  Format.printf "ht: %a@." pp_term term;
+  Format.printf "ht: %a@." pp_ty ty;
   match term with
   | Var x ->
     wf_ctx ctx && List.mem (x,ty) ctx.var
@@ -84,20 +95,20 @@ and has_type ctx term ty =
       | _ -> false
     end
   | App(f,a) ->
-    let ty = infer ctx f in
+    let tyf = infer ctx f in
     begin
-      match ty with
+      match tyf with
       | Arrow(tyl,tyr) -> has_type ctx a tyl && equal_ty ty tyr
       | _ -> false
     end
   | Impl(f,a) ->
     let prop = Prop in
     equal_ty prop ty && has_type ctx f prop && has_type ctx a prop
-  | Forall(ty, binder) ->
-    if has_type ctx term (Prop) then
+  | Forall(fty, binder) ->
+    if equal_ty ty (Prop) then
       let var,term = unbind mkfree_var binder in
-      let ctx' = {ctx with var = (var,ty)::ctx.var} in
-      equal_ty (infer ctx' term) (Prop)
+      let ctx' = {ctx with var = (var,fty)::ctx.var} in
+      equal_ty (infer ctx' term) Prop
     else
       false
   | AbsT(binder) -> false
@@ -174,7 +185,8 @@ let add_const sg const pty mpte : signature =
          with typeof = ConstMap.add const pty sg.typeof;
               defof = ConstMap.add const (Some pte) sg.defof}
       else
-        raise @@ TypingError(WrongConstantType(const, pty, pte))
+          raise @@ TypingError(WrongConstantType(const, pty, pte))
+
 
 let check_decl sg decl =
   match decl with
